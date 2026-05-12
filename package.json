@@ -1,0 +1,109 @@
+{
+  "name": "adjutor-qa",
+  "version": "1.0.0",
+  "description": "Automated QA Test Suite for Adjutor API - Capital Credit Limited / Capital Cash Application",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --runInBand",
+    "test:karma": "jest tests/karma.test.js --runInBand",
+    "test:ecosystem": "jest tests/ecosystem.test.js --runInBand",
+    "test:bvn": "jest tests/bvn.test.js --runInBand",
+    "test:bankaccount": "jest tests/bankaccount.test.js --runInBand",
+    "test:ci": "jest --runInBand --json --outputFile=reports/jest-results.json",
+    "test:verbose": "jest --runInBand --verbose",
+    "test:watch": "jest --runInBand --watch",
+    "test:coverage": "jest --runInBand --coverage",
+    "lint": "eslint tests/ config/ helpers/ --fix",
+    "format": "prettier --write tests/ config/ helpers/",
+    "logs:clean": "node -e \"const Logger = require('./config/logger'); Logger.clearOldLogs(7)\"",
+    "logs:view": "tail -f logs/$(date +%Y-%m-%d)-test.log"
+  },
+  "keywords": [
+    "QA",
+    "testing",
+    "API",
+    "Adjutor",
+    "Jest",
+    "Axios"
+  ],
+  "author": "Capital Credit Limited",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "tests/**/*.js",
+      "config/**/*.js",
+      "helpers/**/*.js"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ],
+    "testTimeout": 30000,
+    "verbose": false,
+    "bail": false,
+    "forceExit": true,
+    "detectOpenHandles": true
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "jest": true,
+      "es2021": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+      "ecmaVersion": "latest"
+    },
+    "rules": {
+      "indent": [
+        "error",
+        2
+      ],
+      "linebreak-style": [
+        "error",
+        "unix"
+      ],
+      "quotes": [
+        "error",
+        "single"
+      ],
+      "semi": [
+        "error",
+        "always"
+      ],
+      "no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ]
+    }
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "semi": true,
+    "printWidth": 100
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/adjutor-api-qa.git"
+  }
+}

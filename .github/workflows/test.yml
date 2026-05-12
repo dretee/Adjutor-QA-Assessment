@@ -1,0 +1,108 @@
+name: Adjutor QA Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Create .env file
+        run: |
+          cp .env.example .env
+          # Use secrets for sensitive data in production
+          sed -i 's/sk_live_eIVIYwPZJe7npIHAcEGRwqAWInRtuc8kMpjkAreN/${{ secrets.ADJUTOR_API_KEY }}/g' .env
+      
+      - name: Run all tests (sequential)
+        run: npm test -- --runInBand --json --outputFile=reports/jest-results.json
+        continue-on-error: true
+        timeout-minutes: 5
+      
+      - name: Run individual module tests
+        run: |
+          npm run test:karma -- --runInBand || true
+          npm run test:ecosystem -- --runInBand || true
+          npm run test:bvn -- --runInBand || true
+          npm run test:bankaccount -- --runInBand || true
+        continue-on-error: true
+        timeout-minutes: 10
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: |
+            reports/jest-results.json
+            reports/test-results-summary.md
+            logs/
+          retention-days: 30
+      
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: reports/jest-results.json
+          check_name: Test Results (Node ${{ matrix.node-version }})
+      
+      - name: Comment on PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const resultsPath = 'reports/jest-results.json';
+            
+            if (fs.existsSync(resultsPath)) {
+              const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+              const summary = `
+              ### 🧪 Adjutor QA Test Results
+              - **Passed:** ${results.numPassedTests}
+              - **Failed:** ${results.numFailedTests}
+              - **Skipped:** ${results.numPendingTests}
+              - **Total:** ${results.numTotalTests}
+              - **Duration:** ${(results.testResults.reduce((sum, r) => sum + r.perfStats.end - r.perfStats.start, 0) / 1000).toFixed(2)}s
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: summary
+              });
+            }
+      
+      - name: Check test thresholds
+        if: always()
+        run: |
+          if [ -f "reports/jest-results.json" ]; then
+            FAILED=$(jq '.numFailedTests' reports/jest-results.json)
+            if [ "$FAILED" -gt 0 ]; then
+              echo "❌ Tests failed: $FAILED failures detected"
+              exit 1
+            fi
+          fi
+        shell: bash
